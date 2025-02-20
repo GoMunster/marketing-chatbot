@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Marketing Chatbot</title>
     
-    <!-- Load React from a stable CDN with specific versions -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <!-- Load React. -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
 
     <style>
         .chat-container {
@@ -18,13 +18,11 @@
             border: 1px solid #ccc;
             border-radius: 8px;
             background: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .message {
             margin: 10px 0;
             padding: 10px;
             border-radius: 8px;
-            word-wrap: break-word;
         }
         .user-message {
             background-color: #007bff;
@@ -53,13 +51,9 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            transition: background-color 0.3s;
         }
         .input-form button:disabled {
             background-color: #ccc;
-        }
-        .input-form button:hover:not(:disabled) {
-            background-color: #0056b3;
         }
         body {
             background-color: #f0f2f5;
@@ -71,29 +65,14 @@
             max-height: 400px;
             overflow-y: auto;
             margin-bottom: 20px;
-            padding-right: 10px;
         }
         .error-message {
-            color: #721c24;
+            color: red;
             margin: 10px 0;
             padding: 10px;
-            border: 1px solid #f5c6cb;
+            border: 1px solid red;
             border-radius: 4px;
-            background-color: #f8d7da;
-        }
-        .connection-status {
-            text-align: center;
-            padding: 5px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-        }
-        .connection-status.connected {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        .connection-status.disconnected {
-            background-color: #f8d7da;
-            color: #721c24;
+            background-color: #fff3f3;
         }
     </style>
 </head>
@@ -108,35 +87,18 @@
             const [inputText, setInputText] = React.useState("");
             const [isLoading, setIsLoading] = React.useState(false);
             const [error, setError] = React.useState(null);
-            const [isConnected, setIsConnected] = React.useState(true);
-            const API_URL = 'https://gomunster.pythonanywhere.com/api/chat';
-            
-            // Check API connection on component mount
-            React.useEffect(() => {
-                checkConnection();
-            }, []);
 
-            const checkConnection = async () => {
-                try {
-                    const response = await fetch(API_URL, {
-                        method: 'HEAD',
-                    });
-                    setIsConnected(response.ok);
-                } catch (err) {
-                    setIsConnected(false);
-                    console.error('Connection check failed:', err);
-                }
-            };
+            // Define your PythonAnywhere API URL here
+            const API_URL = 'https://gomunster.pythonanywhere.com/api/chat';
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 if (!inputText.trim()) return;
 
-                const userMessage = inputText.trim();
-                setMessages(prev => [...prev, { text: userMessage, isBot: false }]);
+                // Add user message
+                setMessages(prev => [...prev, { text: inputText, isBot: false }]);
                 setError(null);
                 setIsLoading(true);
-                setInputText("");
 
                 try {
                     const response = await fetch(API_URL, {
@@ -144,37 +106,28 @@
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ 
-                            message: userMessage,
-                            timestamp: new Date().toISOString()
-                        }),
+                        body: JSON.stringify({ message: inputText }),
                     });
 
                     if (!response.ok) {
-                        throw new Error(`Server responded with status: ${response.status}`);
+                        throw new Error('Failed to get response from server');
                     }
 
                     const data = await response.json();
-                    
-                    if (!data.response) {
-                        throw new Error('Invalid response format from server');
-                    }
-
                     setMessages(prev => [...prev, { 
                         text: data.response, 
                         isBot: true 
                     }]);
-                    setIsConnected(true);
                 } catch (err) {
                     console.error('Error:', err);
-                    setError(`Error: ${err.message || 'Failed to get response. Please try again.'}`);
-                    setIsConnected(false);
+                    setError('Failed to get response. Please try again.');
                 } finally {
                     setIsLoading(false);
+                    setInputText("");
                 }
             };
 
-            // Auto-scroll to bottom
+            // Automatically scroll to bottom when new messages arrive
             const messagesEndRef = React.useRef(null);
             const scrollToBottom = () => {
                 messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -185,10 +138,6 @@
                 <div className="chat-container">
                     <h2>Marketing Assistant</h2>
                     
-                    <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
-                        {isConnected ? 'Connected to server' : 'Disconnected from server'}
-                    </div>
-
                     <div className="messages">
                         {messages.map((message, index) => (
                             <div 
@@ -209,9 +158,9 @@
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
                             placeholder="Type your message..."
-                            disabled={isLoading || !isConnected}
+                            disabled={isLoading}
                         />
-                        <button type="submit" disabled={isLoading || !isConnected || !inputText.trim()}>
+                        <button type="submit" disabled={isLoading}>
                             Send
                         </button>
                     </form>
