@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Marketing Chatbot</title>
     
-    <!-- Load React. -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <!-- Load React from CDNJS for more stability -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 
     <style>
         .chat-container {
@@ -77,9 +77,46 @@
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <!-- Fallback content in case React fails to load -->
+        <div class="chat-container">
+            <h2>Marketing Assistant</h2>
+            <div>Loading chat interface...</div>
+        </div>
+    </div>
 
     <script type="text/babel">
+        // Error Boundary Component
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false, error: null };
+            }
+
+            static getDerivedStateFromError(error) {
+                return { hasError: true, error };
+            }
+
+            componentDidCatch(error, errorInfo) {
+                console.error('ChatApp Error:', error, errorInfo);
+            }
+
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="chat-container">
+                            <h2>Marketing Assistant</h2>
+                            <div className="error-message">
+                                Something went wrong. Please refresh the page.
+                            </div>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
+        // Chat Application Component
         function ChatApp() {
             const [messages, setMessages] = React.useState([
                 { text: "Hello! How can I help you with your marketing needs?", isBot: true }
@@ -88,20 +125,16 @@
             const [isLoading, setIsLoading] = React.useState(false);
             const [error, setError] = React.useState(null);
 
-            // Define your PythonAnywhere API URL here
-            const API_URL = 'https://gomunster.pythonanywhere.com/api/chat';
-
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 if (!inputText.trim()) return;
 
-                // Add user message
                 setMessages(prev => [...prev, { text: inputText, isBot: false }]);
                 setError(null);
                 setIsLoading(true);
 
                 try {
-                    const response = await fetch(API_URL, {
+                    const response = await fetch('https://gomunster.pythonanywhere.com/api/chat', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -127,7 +160,6 @@
                 }
             };
 
-            // Automatically scroll to bottom when new messages arrive
             const messagesEndRef = React.useRef(null);
             const scrollToBottom = () => {
                 messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -168,8 +200,23 @@
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<ChatApp />);
+        // Wrap the app in an error boundary and render
+        try {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(
+                <ErrorBoundary>
+                    <ChatApp />
+                </ErrorBoundary>
+            );
+        } catch (error) {
+            console.error('Rendering Error:', error);
+            document.getElementById('root').innerHTML = `
+                <div class="chat-container">
+                    <h2>Marketing Assistant</h2>
+                    <div class="error-message">Failed to load chat interface. Please refresh the page.</div>
+                </div>
+            `;
+        }
     </script>
 </body>
 </html>
